@@ -4,6 +4,8 @@ const { registerRoute } = require('workbox-routing');
 const { CacheableResponsePlugin } = require('workbox-cacheable-response');
 const { ExpirationPlugin } = require('workbox-expiration');
 const { precacheAndRoute } = require('workbox-precaching/precacheAndRoute');
+const { StaleWhileRevalidate } = require('workbox-strategies');
+
 
 precacheAndRoute(self.__WB_MANIFEST);
 
@@ -26,5 +28,23 @@ warmStrategyCache({
 
 registerRoute(({ request }) => request.mode === 'navigate', pageCache);
 
-// TODO: Implementar el almacenamiento en caché de activos
-registerRoute();
+// Almacenamiento en caché de activos
+registerRoute(
+  // Aquí definimos la función de devolución de llamada de una función que filtrará las solicitudes que queremos almacenar en caché (en este caso, archivos de JS y CSS)
+  ({ request }) => ['style', 'script', 'worker'].includes(request.destination),
+  new StaleWhileRevalidate(
+    {
+    // Nombre del almacenamiento en caché.
+    cacheName: 'asset-cache',
+    plugins: [
+      // Este complemento almacenará en caché las respuestas con estos encabezados hasta una edad máxima de 30 días
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxAgeSeconds: 30 * 24 * 60 *60,
+      }),
+      
+    ],
+  })
+);
